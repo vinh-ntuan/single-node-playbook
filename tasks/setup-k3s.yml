@@ -46,8 +46,9 @@
       environment:
         INSTALL_K3S_VERSION: "{{ k3s_version }}"
       changed_when: true
+  become: true
 
-# Sets up so that ssh user can run kubectl 
+# Sets up so that ssh user can run kubectl
 
 - name: Create .kube directory for SSH user
   ansible.builtin.file:
