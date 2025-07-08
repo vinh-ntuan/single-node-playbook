@@ -181,3 +181,7 @@
 - name: Display ingress result
   ansible.builtin.debug:
     msg: "Ingress result: {{ ingress_result }}"
+
+- name: Display host address 
+  ansible.builtin.debug:
+    msg: "Host address: todo.{{ ansible_host }}.nip.io"
