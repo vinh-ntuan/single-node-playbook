@@ -1,0 +1,183 @@
+---
+# Deploys Todo App, which includes a MySQL service and expose it externally
+
+- name: Create the selected namespace
+  kubernetes.core.k8s:
+    name: "{{ app_namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+
+- name: Apply MySQL Persistent Volume Claim
+  kubernetes.core.k8s:
+    namespace: "{{ app_namespace }}"
+    state: present
+    definition: |
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: mysql-pv-claim
+        labels:
+          app: mysql
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Mi
+  register: mysql_pvc_result
+  # debug:
+  #   var: mysql_pvc_result
+
+- name: Apply MySQL Deployment
+  kubernetes.core.k8s:
+    namespace: "{{ app_namespace }}"
+    state: present
+    definition: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: mysql
+        labels:
+          app: mysql
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: mysql
+        template:
+          metadata:
+            labels:
+              app: mysql
+          spec:
+            containers:
+            - name: mysql
+              image: mysql:8
+              ports:
+              - containerPort: 3306
+              env:
+              - name: MYSQL_ROOT_PASSWORD
+                value: secret
+              - name: MYSQL_DATABASE
+                value: todos
+              volumeMounts:
+              - name: mysql-persistent-storage
+                mountPath: /var/lib/mysql
+            volumes:
+            - name: mysql-persistent-storage
+              persistentVolumeClaim:
+                claimName: mysql-pv-claim
+  register: mysql_deploy_result
+  # Optional: Print the result of the deployment
+  # debug:
+  #   var: mysql_deploy_result
+
+- name: Apply MySQL Service (ClusterIP)
+  kubernetes.core.k8s:
+    namespace: "{{ app_namespace }}"
+    state: present
+    definition: |
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: mysql
+      spec:
+        selector:
+          app: mysql
+        type: ClusterIP # Changed to ClusterIP as it's typically an internal service
+        ports:
+          - protocol: TCP
+            port: 3306
+            targetPort: 3306
+  register: mysql_service_result
+  # debug:
+  #   var: mysql_service_result
+
+- name: Apply Todo App Deployment
+  kubernetes.core.k8s:
+    namespace: "{{ app_namespace }}"
+    state: present
+    definition: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: todo-app
+        labels:
+          app: todo
+      spec:
+        replicas: {{ app_replicas }}
+        selector:
+          matchLabels:
+            app: todo
+        template:
+          metadata:
+            labels:
+              app: todo
+          spec:
+            containers:
+            - name: todo
+              image: vinhntuan/todo-app:latest
+              ports:
+              - containerPort: 3000
+              env:
+              - name: MYSQL_PASSWORD
+                value: secret
+              - name: MYSQL_DB
+                value: todos
+              - name: MYSQL_HOST
+                value: mysql
+              - name: MYSQL_USER
+                value: root
+  register: todo_deploy_result
+  # debug:
+  #   var: todo_deploy_result
+
+- name: Apply Todo App Service (ClusterIP)
+  kubernetes.core.k8s:
+    namespace: "{{ app_namespace }}"
+    state: present
+    definition: |
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: todo
+      spec:
+        selector:
+          app: todo
+        type: ClusterIP
+        ports:
+          - protocol: TCP
+            port: 3000
+            targetPort: 3000
+  register: todo_service_result
+  # debug:
+  #   var: todo_service_result
+
+- name: Apply Todo App Ingress (Traefik)
+  kubernetes.core.k8s:
+    namespace: "{{ app_namespace }}"
+    state: present
+    definition: |
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: todo-ingress
+        annotations:
+          traefik.ingress.kubernetes.io/router.entrypoints: web
+      spec:
+        rules:
+        - host: todo.{{ ansible_host }}.nip.io # Development purposes
+          http:
+            paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                  name: todo
+                  port:
+                    number: 3000
+  register: ingress_result
+
+- name: Display ingress result
+  ansible.builtin.debug:
+    msg: "Ingress result: {{ ingress_result }}"

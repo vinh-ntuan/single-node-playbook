@@ -1,0 +1,78 @@
+---
+
+- name: Create Python virtual environment for Kubernetes modules
+  ansible.builtin.command: "python3 -m venv {{ ansible_venv_path }}"
+  args:
+    creates: "{{ ansible_venv_path }}/bin/activate" # Only run if venv doesn't exist
+  changed_when: false
+  become: false
+
+- name: Ensure Kubernetes Python client is installed
+  become: false
+  ansible.builtin.pip:
+    name:
+      - openshift
+      - pyyaml
+      - kubernetes
+    state: present
+    virtualenv: "{{ ansible_venv_path }}"
+
+- name: Get k3s installed version
+  ansible.builtin.command: k3s --version
+  register: k3s_version_output
+  changed_when: false
+  ignore_errors: true
+
+- name: Set k3s installed version variable
+  when: not ansible_check_mode and k3s_version_output.rc == 0
+  ansible.builtin.set_fact:
+    installed_k3s_version: "{{ k3s_version_output.stdout_lines[0].split(' ')[2] }}"
+
+- name: Download & install k3s only if needed
+  when: not ansible_check_mode and (k3s_version_output.rc != 0 or installed_k3s_version is version(k3s_version, '<'))
+  block:
+    - name: Download K3s install script
+      ansible.builtin.get_url:
+        url: https://get.k3s.io/
+        timeout: 120
+        dest: /usr/local/bin/k3s-install.sh
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Download K3s binary
+      ansible.builtin.command:
+        cmd: /usr/local/bin/k3s-install.sh
+      environment:
+        INSTALL_K3S_VERSION: "{{ k3s_version }}"
+      changed_when: true
+
+# Sets up so that ssh user can run kubectl 
+
+- name: Create .kube directory for SSH user
+  ansible.builtin.file:
+    path: /home/{{ ansible_user }}/.kube
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: Copy K3s kubeconfig to SSH user's .kube directory
+  ansible.builtin.copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /home/{{ ansible_user }}/.kube/config
+    remote_src: true
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+  become: true
+
+- name: Set KUBECONFIG environment variable for SSH user
+  ansible.builtin.lineinfile:
+    path: /home/{{ ansible_user }}/.bashrc
+    line: 'export KUBECONFIG=$HOME/.kube/config'
+    create: true
+    insertafter: EOF
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'    

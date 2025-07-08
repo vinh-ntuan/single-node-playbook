@@ -1,0 +1,24 @@
+- name: Run OS-specific setup
+  hosts: local_ubuntu
+  gather_facts: true
+
+  vars:
+    k3s_version: "v1.30.2+k3s1"
+    ansible_venv_path: "/home/{{ ansible_user }}/.ansible_venv/k8s_ansible_env"
+
+    # App deployment variables
+    app_namespace: "todo"
+    app_replicas: "3"
+
+  tasks:
+    - name: Includes OS-specific setup tasks
+      ansible.builtin.include_tasks: tasks/setup-debian.yml
+      when: ansible_os_family == 'Debian'
+
+    - name: Set up K3s cluster & Kubernetes python client
+      ansible.builtin.include_tasks: tasks/setup-k3s.yml
+
+    - name: Deploy Todo App to cluster
+      ansible.builtin.include_tasks: tasks/deploy-todo.yml
+      vars:
+        ansible_python_interpreter: "{{ ansible_venv_path }}/bin/python3"
