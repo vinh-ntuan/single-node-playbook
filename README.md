@@ -13,7 +13,8 @@ Running instance: http://todo.158.158.0.107.nip.io/ (on an Azure VM)
 Virtual-Machine requirements: 
 - Distro: Debian / Ubuntu. (Cluster setup not supported yet on SUSE/RHEL)
 - passwordless ssh 
-- python installed (ansible requirement)
+- python installed (ansible requirement) 
+- http port is open (to expose app)
 
 Tested On:
 - Debian 11
@@ -31,8 +32,8 @@ Playbook Steps:
 2. Setting up kubernetes python-client
    - Requirement of ansible module `kubernetes.core.k8s`
    - Installed to venv in `/home/SSH_USER/.ansible_venv/k8s_ansible_env`  
-3. Deployment with kubernetes through ansible 
-    - All deployment resources stays in namespace variable `app_namespace` specified in `main.yml`
+3. Deployment with kubernetes through ansible (with variables specified in inventory)
+    - All deployment resources stays in namespace variable `app_namespace` 
     - MySQL pods are not replicated. Replicated DBs configurations usually involve master-slave replicas, which is outside the scope of this project
     - Todo Apps are replicated `app_replicas` time
 4. Exposing todo service externally
