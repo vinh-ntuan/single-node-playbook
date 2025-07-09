@@ -5,7 +5,7 @@ An Ansible playbook to:
 
 Modify `hosts` field and inventory file as needed and run 
 ```bash
-ansible-playbook  -i inventory.ini main.yml 
+ansible-playbook  -i inventory.yml main.yml 
 ```
 
 Running instance: http://todo.158.158.0.107.nip.io/ (on an Azure VM)
@@ -36,6 +36,7 @@ Playbook Steps:
     - All deployment resources stays in namespace variable `app_namespace` 
     - MySQL pods are not replicated. Replicated DBs configurations usually involve master-slave replicas, which is outside the scope of this project
     - Todo Apps are replicated `app_replicas` time
+    - App labels can be specified when using `inventory.yml`
 4. Exposing todo service externally
     - Ingress Controller `Traefik` was chosen (bundled with installation of k3s)
     - App is then accessible at `todo.{{ ansible_host }}.nip.io`, i.e for virtual machine with IP [5.5.5.5]() -> app accessible at [todo.5.5.5.5.nip.io]()

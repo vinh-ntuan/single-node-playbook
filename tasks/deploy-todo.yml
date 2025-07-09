@@ -12,13 +12,12 @@
   kubernetes.core.k8s:
     namespace: "{{ app_namespace }}"
     state: present
-    definition: |
+    definition:
       apiVersion: v1
       kind: PersistentVolumeClaim
       metadata:
         name: mysql-pv-claim
-        labels:
-          app: mysql
+        labels: "{{ label_mysql_pvc }}"
       spec:
         accessModes:
           - ReadWriteOnce
@@ -33,22 +32,19 @@
   kubernetes.core.k8s:
     namespace: "{{ app_namespace }}"
     state: present
-    definition: |
+    definition:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
         name: mysql
-        labels:
-          app: mysql
+        labels: "{{ label_mysql_deployment }}"
       spec:
         replicas: 1
         selector:
-          matchLabels:
-            app: mysql
+          matchLabels: "{{ label_mysql_pod }}"
         template:
           metadata:
-            labels:
-              app: mysql
+            labels: "{{ label_mysql_pod }}"
           spec:
             containers:
             - name: mysql
@@ -76,15 +72,16 @@
   kubernetes.core.k8s:
     namespace: "{{ app_namespace }}"
     state: present
-    definition: |
+    definition:
       apiVersion: v1
       kind: Service
       metadata:
         name: mysql
+        labels: "{{ label_mysql_service }}"
       spec:
         selector:
           app: mysql
-        type: ClusterIP # Changed to ClusterIP as it's typically an internal service
+        type: ClusterIP
         ports:
           - protocol: TCP
             port: 3306
@@ -97,22 +94,19 @@
   kubernetes.core.k8s:
     namespace: "{{ app_namespace }}"
     state: present
-    definition: |
+    definition:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
         name: todo-app
-        labels:
-          app: todo
+        labels: "{{ label_todo_deployment }}"
       spec:
-        replicas: {{ app_replicas }}
+        replicas: "{{ app_replicas }}"
         selector:
-          matchLabels:
-            app: todo
+          matchLabels: "{{ label_todo_pod }}"
         template:
           metadata:
-            labels:
-              app: todo
+            labels: "{{ label_todo_pod }}"
           spec:
             containers:
             - name: todo
@@ -136,11 +130,12 @@
   kubernetes.core.k8s:
     namespace: "{{ app_namespace }}"
     state: present
-    definition: |
+    definition:
       apiVersion: v1
       kind: Service
       metadata:
         name: todo
+        labels: "{{ label_todo_service }}"
       spec:
         selector:
           app: todo
@@ -157,16 +152,17 @@
   kubernetes.core.k8s:
     namespace: "{{ app_namespace }}"
     state: present
-    definition: |
+    definition:
       apiVersion: networking.k8s.io/v1
       kind: Ingress
       metadata:
         name: todo-ingress
+        labels: "{{ label_todo_ingress }}"
         annotations:
           traefik.ingress.kubernetes.io/router.entrypoints: web
       spec:
         rules:
-        - host: todo.{{ ansible_host }}.nip.io # Development purposes
+        - host: "todo.{{ ansible_host }}.nip.io" # Development purposes
           http:
             paths:
             - path: /
@@ -182,6 +178,6 @@
   ansible.builtin.debug:
     msg: "Ingress result: {{ ingress_result }}"
 
-- name: Display host address 
+- name: Display host address
   ansible.builtin.debug:
     msg: "Host address: todo.{{ ansible_host }}.nip.io"
