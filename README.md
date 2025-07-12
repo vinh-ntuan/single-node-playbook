@@ -11,7 +11,7 @@ ansible-playbook  -i inventory.yml main.yml
 Running instance: http://todo.158.158.0.107.nip.io/ (on an Azure VM)
 
 Virtual-Machine requirements: 
-- Distro: Debian / Ubuntu. (Cluster setup not supported yet on SUSE/RHEL)
+- Distro: Debian / Ubuntu. (Cluster setup not supported yet on SUSE/RHEL, But installing k3s + deploying app works on any Linux system with pip)
 - passwordless ssh 
 - python installed (ansible requirement) 
 - http port is open (to expose app)
