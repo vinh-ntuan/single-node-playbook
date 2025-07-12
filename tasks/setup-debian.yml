@@ -5,6 +5,7 @@
     name: swap
     state: absent
   when: ansible_facts['swaptotal_mb'] > 0
+  become: true
 
 - name: Disable Firewall
   when:
@@ -22,6 +23,7 @@
         cmd: ufw disable
       changed_when: false
       when: firewall_status.stdout.find('Status":" active') != -1
+  become: true
 
 - name: Update apt cache
   ansible.builtin.apt:
@@ -35,5 +37,4 @@
       - python3-pip
       - python3-venv
     state: present
-  when: ansible_os_family == "Debian"
   become: true
